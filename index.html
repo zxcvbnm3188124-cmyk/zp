@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>抽奖转盘</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: sans-serif;
+      background: #f5f5f5;
+    }
+    h1 {
+      margin-top: 20px;
+      font-size: 1.5em;
+      color: #333;
+    }
+    #info {
+      margin: 10px;
+      font-size: 1.2em;
+      color: #333;
+    }
+    .wheel-container {
+      position: relative;
+      width: 300px;
+      height: 300px;
+      margin: 20px;
+    }
+    .pointer {
+      position: absolute;
+      top: -10px;
+      left: calc(50% - 10px);
+      width: 0;
+      height: 0;
+      border-left: 10px solid transparent;
+      border-right: 10px solid transparent;
+      border-bottom: 20px solid black;
+      z-index: 2;
+    }
+    .wheel {
+      position: relative;
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      border: 5px solid #ccc;
+      background: conic-gradient(
+        #f39c12 0deg, #f39c12 60deg,
+        #bdc3c7 60deg, #bdc3c7 120deg,
+        #3498db 120deg, #3498db 180deg,
+        #e74c3c 180deg, #e74c3c 240deg,
+        #2ecc71 240deg, #2ecc71 300deg,
+        #9b59b6 300deg, #9b59b6 360deg
+      );
+      transition: transform 3s ease-out;
+    }
+    .label-wrapper {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform-origin: 0 0;
+    }
+    .label {
+      position: absolute;
+      left: 0;
+      top: 0;
+      white-space: nowrap;
+      font-size: 1em;
+      font-weight: bold;
+      color: #fff;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    }
+    #spinButton {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      padding: 10px 20px;
+      font-size: 1em;
+      background: #ff6347;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      z-index: 1;
+    }
+    #message {
+      margin: 15px;
+      font-size: 1.2em;
+      color: #e74c3c;
+    }
+  </style>
+</head>
+<body>
+  <h1>抽奖活动</h1>
+  <div id="info">剩余次数: <span id="times">5</span></div>
+  <div class="wheel-container">
+    <div class="pointer"></div>
+    <div class="wheel" id="wheel">
+      <!-- 中心的“开始抽奖”按钮 -->
+      <button id="spinButton">开始抽奖</button>
+      <!-- 各扇区文字标签 -->
+      <div class="label-wrapper" style="transform: rotate(30deg);">
+        <div class="label" style="transform: translateY(-130px) rotate(-30deg);">3元</div>
+      </div>
+      <div class="label-wrapper" style="transform: rotate(90deg);">
+        <div class="label" style="transform: translateY(-130px) rotate(-90deg);">未中奖</div>
+      </div>
+      <div class="label-wrapper" style="transform: rotate(150deg);">
+        <div class="label" style="transform: translateY(-130px) rotate(-150deg);">0.3元</div>
+      </div>
+      <div class="label-wrapper" style="transform: rotate(210deg);">
+        <div class="label" style="transform: translateY(-130px) rotate(-210deg);">再来一次</div>
+      </div>
+      <div class="label-wrapper" style="transform: rotate(270deg);">
+        <div class="label" style="transform: translateY(-130px) rotate(-270deg);">0.1元</div>
+      </div>
+      <div class="label-wrapper" style="transform: rotate(330deg);">
+        <div class="label" style="transform: translateY(-130px) rotate(-330deg);">再来一次</div>
+      </div>
+    </div>
+  </div>
+  <div id="message"></div>
+  <script>
+    (function(){
+      const segments = ["3元", "未中奖", "0.3元", "再来一次", "0.1元", "再来一次"];
+      let currentIndex = 0;
+      let remaining = 5;
+      let total = 0;
+      const spinButton = document.getElementById('spinButton');
+      const timesSpan = document.getElementById('times');
+      const messageDiv = document.getElementById('message');
+      const wheel = document.getElementById('wheel');
+      let currentAngle = 0;
+
+      timesSpan.textContent = remaining;
+
+      spinButton.addEventListener('click', function() {
+        if (remaining <= 0) return;
+        spinButton.disabled = true; // 禁用按钮避免重复点击
+        // 获取当前结果
+        const result = segments[currentIndex];
+        // 更新剩余次数和总奖金额
+        remaining--;
+        if (result === "再来一次") {
+          remaining++; // 抵消本次抽奖
+        } else if (result.endsWith("元")) {
+          total += parseFloat(result);
+        }
+        timesSpan.textContent = remaining;
+        // 计算转盘旋转角度，使当前扇区停在指针位置
+        const origAngle = 30 + 60 * currentIndex; // 扇区中心角度
+        const rotateBy = 720 + (360 - origAngle); // 先旋转2圈再对准
+        currentAngle += rotateBy;
+        wheel.style.transform = "rotate(" + currentAngle + "deg)";
+        // 下一个索引
+        currentIndex = (currentIndex + 1) % segments.length;
+        // 动画结束后处理
+        wheel.addEventListener('transitionend', function handler() {
+          wheel.removeEventListener('transitionend', handler);
+          spinButton.disabled = false;
+          if (remaining <= 0) {
+            // 抽奖结束，显示总金额
+            messageDiv.textContent = "抽奖结束，共获得" + ((total % 1 === 0) ? total.toFixed(0) : total.toFixed(1)) + "元";
+            spinButton.disabled = true;
+          }
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
